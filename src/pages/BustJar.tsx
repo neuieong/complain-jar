@@ -6,15 +6,22 @@ import { JarVisual } from '../components/JarVisual'
 
 export function BustJar() {
   const [busted, setBusted] = useState(false)
+  const [busting, setBusting] = useState(false)
   const [amountAtBust, setAmountAtBust] = useState('')
   const navigate = useNavigate()
   const bustJar = useJarStore((s) => s.bustJar)
   const stats = useJarStore((s) => s.stats)()
 
-  function handleBust() {
+  async function handleBust() {
+    if (busting) return
+    setBusting(true)
     setAmountAtBust(stats.totalAmountFormatted)
-    bustJar()
-    setBusted(true)
+    try {
+      await bustJar()
+      setBusted(true)
+    } finally {
+      setBusting(false)
+    }
   }
 
   if (busted) {
@@ -73,9 +80,10 @@ export function BustJar() {
       <div className="mt-6 w-full max-w-xs space-y-3">
         <button
           onClick={handleBust}
-          className="w-full bg-red-500 hover:bg-red-600 active:scale-95 text-white font-semibold py-4 rounded-2xl shadow-md shadow-red-200 transition-all"
+          disabled={busting}
+          className="w-full bg-red-500 hover:bg-red-600 active:scale-95 text-white font-semibold py-4 rounded-2xl shadow-md shadow-red-200 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Yes, bust it! 🪙
+          {busting ? 'Busting…' : 'Yes, bust it! 🪙'}
         </button>
         <button
           onClick={() => navigate(-1)}

@@ -115,37 +115,7 @@ export function createHttpAdapter(
   }
 }
 
-// ─── Bootstrap (HTTP path) ────────────────────────────────────────────────────
-// Called after login/register to ensure the user has a jar.
-// Tries to load a stored jarId first; if none or jar not found, creates one.
-
 const ACTIVE_JAR_KEY = 'cj:activeJarId'
-
-export async function bootstrapHttp(
-  adapter: StorageAdapter,
-): Promise<{ jarId: string }> {
-  const stored = localStorage.getItem(ACTIVE_JAR_KEY)
-
-  if (stored) {
-    const jar = await adapter.getJar(stored)
-    if (jar) return { jarId: stored }
-    // Stored jarId is stale (deleted on server, etc.) — fall through to create.
-  }
-
-  // No valid jar yet — ask the server to create one.
-  const token = null // adapter has the token via closure; we call the API via fetch directly
-  // Re-use the adapter's internal request by calling saveJar with a placeholder,
-  // but the adapter.saveJar is PUT-only. We need to POST /api/jars here.
-  // We do this via a raw fetch so bootstrapHttp stays decoupled from auth internals.
-  void token // not used here; token is handled by the adapter factory closure
-
-  // We reach here only if there's no valid stored jar, so we POST via the
-  // adapter's underlying fetch. Since we don't have access to the raw request
-  // helper outside the factory, we expose a createJar helper below instead.
-  throw new Error(
-    'bootstrapHttp: no stored jar found. Call createJarAndBootstrap() instead.',
-  )
-}
 
 /** Creates a new jar on the backend and stores the resulting jarId locally. */
 export async function createJarAndBootstrap(

@@ -25,11 +25,12 @@ export function History() {
     setAnalysis({ status: 'loading' })
 
     try {
+      const token = getToken()
       const res = await fetch(`${API_URL}/api/jars/${jar.id}/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${getToken() ?? ''}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       })
       const body = await res.json() as { report?: string; complaintCount?: number; error?: string }

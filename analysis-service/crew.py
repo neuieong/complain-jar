@@ -114,7 +114,6 @@ def run_analysis(complaints: list[str]) -> str:
             4. **Light observation** — one friendly, slightly humorous takeaway
 
             Total complaints analysed: {len(complaints)}
-            Total amount in jar: ${len(complaints):.2f}
 
             Keep it warm, readable, and under 200 words.
         """),
