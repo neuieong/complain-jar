@@ -175,6 +175,15 @@ API response shapes are serialized via `serializeJar` / `serializeComplaint` to 
 
 **To deploy the analysis service:** Host the Python FastAPI service on Railway or Fly.io and set `ANALYSIS_SERVICE_URL` on the Express service. Currently only works locally.
 
+## Recently fixed bugs
+
+- **`BustJar` missing await** — `bustJar()` was not awaited; UI showed success before backend confirmed. Fixed: `handleBust` is now async, awaits the action, and disables the button during the request.
+- **`History` invalid Bearer header** — sent `Authorization: Bearer ` (empty token) instead of omitting the header when unauthenticated. Fixed: header is only set when a token exists.
+- **`crew.py` wrong jar total** — told the AI "Total amount in jar: $5.00" when there were 5 complaints (used `len()` as a dollar value). Fixed: line removed entirely since complaint amounts aren't passed to the analysis service.
+- **`bootstrapHttp` dead code** — exported function that immediately threw; superseded by `ensureJar`. Fixed: deleted.
+- **`Prisma.JarGetPayload` type** — `JarWithMembers` used a generic TypeScript syntax Railway's compiler rejected. Fixed: replaced with the proper Prisma utility type.
+- **`prisma generate` missing from build** — Railway build compiled TypeScript but never generated the Prisma client, causing a startup crash. Fixed: added `npx prisma generate` to `railway.json` build command.
+
 ## Known bugs (minor, unfixed)
 
 - **React StrictMode double calls** — `getJar` + `getComplaints` are called twice on mount in dev (StrictMode fires effects twice). Harmless; the dedup only covers `ensureJar`, not the store's `init`.
@@ -258,11 +267,19 @@ GET    /api/health                      — liveness check
 
 All `/api/jars` routes require `Authorization: Bearer <token>`.
 
-## Planned future features
+## What to work on next
 
-1. **Deploy analysis service** — host Python/CrewAI on Railway or Fly.io; set `ANALYSIS_SERVICE_URL` on the Express service
-2. **Partner/friend invite UI** — data model + `POST /api/jars/:id/members` already exist; needs a UI flow
-3. **Group jars** — same as above; the data model supports it already
-4. **Real payments** — `amountPerComplaint` in cents maps directly to a Stripe payment amount
-5. **Push notifications** — "your partner just complained again"
-6. **React Native port** — Zustand store and service layer are framework-agnostic; only the component layer needs replacing
+### High priority
+1. **Deploy analysis service** — host Python/FastAPI on Railway or Fly.io so the Analyse button works on the live site; set `ANALYSIS_SERVICE_URL` on the Express Railway service and update CORS in `main.py` to allow the Railway backend origin
+2. **Runtime validation on localStorage data** — `JSON.parse(raw) as T` is a TypeScript cast with no runtime check; add Zod validation at the storage boundary before any real data is stored
+
+### Medium priority
+3. **Partner/friend invite UI** — backend + data model already exist (`POST /api/jars/:id/members`, `JarMember` table); needs an invite flow in the UI
+4. **Snapshot `currency` per complaint** — currently always read from the parent `Jar`; if currency changes, old complaints show the wrong symbol
+5. **Replace `generateId()` in localStorage adapter** — `Date.now() + Math.random()` is not collision-safe; replace with `crypto.randomUUID()`
+
+### Longer term
+6. **Group jars** — data model supports it; needs a "select active jar" UI concept and multi-member flows
+7. **Real payments** — `amountPerComplaint` stored in cents maps directly to a Stripe payment intent amount
+8. **Push notifications** — "your partner just complained again"
+9. **React Native port** — Zustand store and service layer are already framework-agnostic; only the component layer needs replacing
