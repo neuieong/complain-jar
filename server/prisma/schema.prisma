@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users are lightweight — name + email/password for auth.
+// avatar is reserved for future profile photos.
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  ownedJars   Jar[]       @relation("JarOwner")
+  memberships JarMember[]
+  complaints  Complaint[]
+}
+
+// A Jar holds the running total via its complaints. bustedAt is stamped
+// (not deleted) when emptied so bust history can be added later.
+model Jar {
+  id                 String    @id @default(cuid())
+  name               String
+  ownerId            String
+  amountPerComplaint Int // cents
+  currency           String    @default("USD")
+  createdAt          DateTime  @default(now())
+  bustedAt           DateTime?
+
+  owner      User        @relation("JarOwner", fields: [ownerId], references: [id])
+  members    JarMember[]
+  complaints Complaint[]
+}
+
+// Explicit join table so group jars (many members per jar) work without
+// any schema change — just more rows here.
+model JarMember {
+  jarId  String
+  userId String
+
+  jar  Jar  @relation(fields: [jarId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([jarId, userId])
+}
+
+// amount is snapshotted from the jar's amountPerComplaint at creation time
+// so history stays correct even if the jar setting is later changed.
+model Complaint {
+  id        String   @id @default(cuid())
+  jarId     String
+  userId    String
+  note      String?
+  amount    Int // cents — snapshot at time of entry
+  createdAt DateTime @default(now())
+
+  jar  Jar  @relation(fields: [jarId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+}
