@@ -11,13 +11,11 @@ A digital take on the swear jar — every complaint costs money that goes into a
 
 ## Current status
 
-Full-stack prototype with a working HTTP connection between frontend and backend. The frontend uses an **async `StorageAdapter` interface** that can be backed by either `localStorage` (offline/demo mode) or the Express HTTP API (real mode). Mode is toggled via `VITE_API_URL` — if set, the app shows a login screen and reads/writes to Neon; if unset, it falls back to localStorage with no auth required.
+Full-stack prototype **fully deployed and live end-to-end**. The frontend (Vercel) talks to the Express backend (Railway) which reads/writes to Neon PostgreSQL. The frontend uses an **async `StorageAdapter` interface** that can be backed by either `localStorage` (offline/demo mode) or the Express HTTP API (real mode). Mode is toggled via `VITE_API_URL` — if set, the app shows a login screen and reads/writes to Neon; if unset, it falls back to localStorage with no auth required.
 
-A **CrewAI analysis feature** is built and working locally: three agents (Categorizer, Sentiment Analyst, Summarizer) process the jar's complaints and return a short insights report displayed on the History page. The Python/FastAPI service runs separately alongside Express.
+A **CrewAI analysis feature** is built and working locally: three agents (Categorizer, Sentiment Analyst, Summarizer) process the jar's complaints and return a short insights report displayed on the History page. The Python/FastAPI service runs separately alongside Express. It is not yet deployed — it only works when running locally.
 
-The frontend is deployed to Vercel (localStorage mode — `VITE_API_URL` not yet set there). The Express backend and Python analysis service run locally only. The next step to go fully live is deploying Express to Railway and setting `VITE_API_URL` on Vercel.
-
-**Demo credentials (local):** `demo@complainjar.dev` / `password123` — jar pre-seeded with 25 realistic complaints.
+**Demo credentials:** `demo@complainjar.dev` / `password123` — jar pre-seeded with 25 realistic complaints.
 
 ## Tech stack
 
@@ -164,19 +162,24 @@ API response shapes are serialized via `serializeJar` / `serializeComplaint` to 
 
 | Service | Status | URL |
 |---|---|---|
-| Frontend (React) | ✅ Deployed | https://complain-jar.vercel.app (localStorage mode) |
+| Frontend (React) | ✅ Deployed | https://complain-jar.vercel.app |
 | Database (Neon) | ✅ Live | Neon PostgreSQL, schema applied |
-| Backend (Express) | ⚠️ Local only | `localhost:3001` |
+| Backend (Express) | ✅ Deployed | https://complain-jar-production.up.railway.app |
 | Analysis (Python/CrewAI) | ⚠️ Local only | `localhost:8000` |
 
-**To go fully live:** Deploy Express to Railway → set `VITE_API_URL` + `CORS_ORIGIN` → redeploy Vercel. The analysis service would need its own host (Railway, Fly.io) or be rewritten as a serverless function.
+**Railway notes:**
+- Build command: `cd server && npm install && npx prisma generate && npm run build`
+- Start command: `cd server && npm start`
+- Required env variables: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`
+- Public networking port must match what Railway assigns as `PORT` (check deploy logs for `Server running on http://localhost:XXXX`)
+
+**To deploy the analysis service:** Host the Python FastAPI service on Railway or Fly.io and set `ANALYSIS_SERVICE_URL` on the Express service. Currently only works locally.
 
 ## Known bugs (minor, unfixed)
 
-- **`bootstrapHttp` is dead code** — exported from `httpAdapter.ts` but immediately throws; superseded by `ensureJar`. Safe to delete.
 - **React StrictMode double calls** — `getJar` + `getComplaints` are called twice on mount in dev (StrictMode fires effects twice). Harmless; the dedup only covers `ensureJar`, not the store's `init`.
 - **`GET /api/jars` picks newest jar** — ordered by `createdAt desc`; if a user accumulates multiple jars, they always land on the most recently created one. Fine for single-jar use, but needs a "select active jar" concept for multi-jar support.
-- **Analysis service CORS** — hardcoded to `http://localhost:3001`. Needs updating when Express is deployed.
+- **Analysis service CORS** — hardcoded to `http://localhost:3001`. Needs updating when the Python service is deployed.
 - **`bustedAt` semantics are ambiguous** — means "was busted at some point", not "is currently empty". Never cleared when a new cycle begins. Needs a `busts[]` log if bust history is tracked.
 
 ## Known issues to address before real payments
@@ -257,7 +260,7 @@ All `/api/jars` routes require `Authorization: Bearer <token>`.
 
 ## Planned future features
 
-1. **Deploy backend to Railway** — set `VITE_API_URL` on Vercel; app goes fully live end-to-end
+1. **Deploy analysis service** — host Python/CrewAI on Railway or Fly.io; set `ANALYSIS_SERVICE_URL` on the Express service
 2. **Partner/friend invite UI** — data model + `POST /api/jars/:id/members` already exist; needs a UI flow
 3. **Group jars** — same as above; the data model supports it already
 4. **Real payments** — `amountPerComplaint` in cents maps directly to a Stripe payment amount
