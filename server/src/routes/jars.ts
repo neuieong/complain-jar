@@ -8,7 +8,7 @@ jarsRouter.use(requireAuth)
 
 const JAR_INCLUDE = { members: true } as const
 
-type JarWithMembers = Awaited<ReturnType<typeof prisma.jar.findUniqueOrThrow<{ include: typeof JAR_INCLUDE }>>>
+type JarWithMembers = Prisma.JarGetPayload<{ include: { members: true } }>
 
 // Serialize a Prisma Jar row into the shape the frontend StorageAdapter expects.
 function serializeJar(jar: JarWithMembers) {
