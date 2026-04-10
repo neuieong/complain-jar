@@ -12,9 +12,15 @@ dist
 dist-ssr
 *.local
 
-# Server
+# Environment files — never commit secrets or local overrides
+.env
+.env.local
 server/.env
+analysis-service/.env
+
+# Build output & runtime dirs
 server/dist
+analysis-service/.venv
 
 # Editor directories and files
 .vscode/*

@@ -1,44 +1,44 @@
 import { create } from 'zustand'
-import type { Complaint, Jar, JarStats } from '../types'
-import {
-  bootstrapStorage,
-  formatAmount,
-  generateId,
-  localStorageAdapter as storage,
-} from '../services/storage'
+import type { Complaint, Jar, JarStats, StorageAdapter } from '../types'
+import { formatAmount, generateId } from '../services/storage'
 
 interface JarState {
   jar: Jar | null
   complaints: Complaint[]
   jarId: string
 
-  // Actions
-  init: () => void
-  addComplaint: (note?: string) => void
-  bustJar: () => void
-  updateJarName: (name: string) => void
-  updateAmountPerComplaint: (cents: number) => void
+  // Actions — all async so both localStorage and HTTP adapters work identically
+  init: (adapter: StorageAdapter, jarId: string) => Promise<void>
+  addComplaint: (note?: string) => Promise<void>
+  bustJar: () => Promise<void>
+  updateJarName: (name: string) => Promise<void>
+  updateAmountPerComplaint: (cents: number) => Promise<void>
 
   // Derived
   stats: () => JarStats
+
+  // Internal — the active adapter, set once by init()
+  _adapter: StorageAdapter | null
 }
 
 export const useJarStore = create<JarState>((set, get) => ({
   jar: null,
   complaints: [],
   jarId: '',
+  _adapter: null,
 
-  init() {
-    const { jarId } = bootstrapStorage()
-    const jar = storage.getJar(jarId)
-    const complaints = storage.getComplaints(jarId)
-    set({ jar, complaints, jarId })
+  async init(adapter: StorageAdapter, jarId: string) {
+    const [jar, complaints] = await Promise.all([
+      adapter.getJar(jarId),
+      adapter.getComplaints(jarId),
+    ])
+    set({ jar, complaints, jarId, _adapter: adapter })
   },
 
-  addComplaint(note?: string) {
-    const { jar, jarId } = get()
-    if (!jar) return
-    const user = storage.getCurrentUser()
+  async addComplaint(note?: string) {
+    const { jar, jarId, _adapter } = get()
+    if (!jar || !_adapter) return
+    const user = await _adapter.getCurrentUser()
     const complaint: Complaint = {
       id: generateId(),
       jarId,
@@ -47,32 +47,30 @@ export const useJarStore = create<JarState>((set, get) => ({
       amount: jar.amountPerComplaint,
       createdAt: new Date().toISOString(),
     }
-    storage.saveComplaint(complaint)
+    await _adapter.saveComplaint(complaint)
     set((s) => ({ complaints: [complaint, ...s.complaints] }))
   },
 
-  bustJar() {
-    const { jar, jarId } = get()
-    if (!jar) return
-    const busted: Jar = { ...jar, bustedAt: new Date().toISOString() }
-    storage.saveJar(busted)
-    storage.clearComplaints(jarId)
+  async bustJar() {
+    const { jarId, _adapter } = get()
+    if (!_adapter) return
+    const busted = await _adapter.bustJar(jarId)
     set({ jar: busted, complaints: [] })
   },
 
-  updateJarName(name: string) {
-    const { jar } = get()
-    if (!jar) return
+  async updateJarName(name: string) {
+    const { jar, _adapter } = get()
+    if (!jar || !_adapter) return
     const updated = { ...jar, name }
-    storage.saveJar(updated)
+    await _adapter.saveJar(updated)
     set({ jar: updated })
   },
 
-  updateAmountPerComplaint(cents: number) {
-    const { jar } = get()
-    if (!jar) return
+  async updateAmountPerComplaint(cents: number) {
+    const { jar, _adapter } = get()
+    if (!jar || !_adapter) return
     const updated = { ...jar, amountPerComplaint: cents }
-    storage.saveJar(updated)
+    await _adapter.saveJar(updated)
     set({ jar: updated })
   },
 

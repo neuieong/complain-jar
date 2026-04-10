@@ -31,6 +31,16 @@ async function getJarForMember(jarId: string, userId: string) {
   return jar
 }
 
+// GET /api/jars — list all jars the requesting user is a member of, newest first.
+jarsRouter.get('/', async (req: AuthRequest, res) => {
+  const memberships = await prisma.jarMember.findMany({
+    where: { userId: req.userId! },
+    include: { jar: { include: JAR_INCLUDE } },
+    orderBy: { jar: { createdAt: 'desc' } },
+  })
+  res.json(memberships.map((m) => serializeJar(m.jar)))
+})
+
 // POST /api/jars — create a jar; creator is automatically the owner and first member.
 jarsRouter.post('/', async (req: AuthRequest, res) => {
   const { name, amountPerComplaint = 100, currency = 'USD' } = req.body as {

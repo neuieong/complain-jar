@@ -4,6 +4,7 @@ import helmet from 'helmet'
 import { authRouter } from './routes/auth'
 import { jarsRouter } from './routes/jars'
 import { complaintsRouter } from './routes/complaints'
+import { analyzeRouter } from './routes/analyze'
 import { errorHandler } from './middleware/error'
 
 export const app = express()
@@ -21,6 +22,7 @@ app.use(express.json({ limit: '100kb' }))
 app.use('/api/auth', authRouter)
 app.use('/api/jars', jarsRouter)
 app.use('/api/jars/:jarId/complaints', complaintsRouter)
+app.use('/api/jars/:id/analyze', analyzeRouter)
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true })

@@ -38,15 +38,18 @@ export interface JarStats {
 }
 
 // ─── Storage contract ─────────────────────────────────────────────────────────
-// This interface defines what any storage backend must implement.
-// Right now it's backed by localStorage; later it can be swapped for a REST API
-// or a mobile native storage layer without changing the rest of the app.
+// All methods are async so the interface works identically whether backed by
+// localStorage (wraps values in Promise.resolve) or a remote HTTP API (fetch).
+// Swap the adapter in one place; the Zustand store and components are unchanged.
 
 export interface StorageAdapter {
-  getJar(jarId: string): Jar | null
-  saveJar(jar: Jar): void
-  getComplaints(jarId: string): Complaint[]
-  saveComplaint(complaint: Complaint): void
-  clearComplaints(jarId: string): void
-  getCurrentUser(): User
+  getCurrentUser(): Promise<User>
+  getJar(jarId: string): Promise<Jar | null>
+  saveJar(jar: Jar): Promise<void>
+  getComplaints(jarId: string): Promise<Complaint[]>
+  saveComplaint(complaint: Complaint): Promise<void>
+  // bustJar atomically clears complaints + stamps bustedAt on the jar.
+  // localStorage does it in two steps; the HTTP adapter maps it to a single
+  // POST /api/jars/:id/bust which is transactional on the server.
+  bustJar(jarId: string): Promise<Jar>
 }

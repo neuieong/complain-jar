@@ -30,7 +30,7 @@ function createDefaultJar(): Jar {
   }
 }
 
-// ─── localStorage adapter ─────────────────────────────────────────────────────
+// ─── localStorage helpers ─────────────────────────────────────────────────────
 
 function get<T>(key: string): T | null {
   try {
@@ -45,42 +45,50 @@ function set<T>(key: string, value: T): void {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
-// ─── Public adapter ───────────────────────────────────────────────────────────
+// ─── localStorage adapter ─────────────────────────────────────────────────────
+// All methods return Promises so this adapter satisfies the same async
+// StorageAdapter interface as the HTTP adapter — zero changes to callers
+// when switching between the two.
 
 export const localStorageAdapter: StorageAdapter = {
-  getCurrentUser(): User {
+  async getCurrentUser(): Promise<User> {
     return get<User>(KEYS.currentUser) ?? DEFAULT_USER
   },
 
-  getJar(jarId: string): Jar | null {
+  async getJar(jarId: string): Promise<Jar | null> {
     return get<Jar>(KEYS.jar(jarId))
   },
 
-  saveJar(jar: Jar): void {
+  async saveJar(jar: Jar): Promise<void> {
     set(KEYS.jar(jar.id), jar)
   },
 
-  getComplaints(jarId: string): Complaint[] {
+  async getComplaints(jarId: string): Promise<Complaint[]> {
     return get<Complaint[]>(KEYS.complaints(jarId)) ?? []
   },
 
-  saveComplaint(complaint: Complaint): void {
+  async saveComplaint(complaint: Complaint): Promise<void> {
     const existing = get<Complaint[]>(KEYS.complaints(complaint.jarId)) ?? []
     set(KEYS.complaints(complaint.jarId), [complaint, ...existing])
   },
 
-  clearComplaints(jarId: string): void {
+  async bustJar(jarId: string): Promise<Jar> {
+    const jar = get<Jar>(KEYS.jar(jarId))
+    if (!jar) throw new Error(`Jar ${jarId} not found`)
+    const busted: Jar = { ...jar, bustedAt: new Date().toISOString() }
+    set(KEYS.jar(jarId), busted)
     set(KEYS.complaints(jarId), [])
+    return busted
   },
 }
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
-// Ensure a jar exists on first load.
+// Ensures a default jar exists on first load (localStorage path only).
 
 export function bootstrapStorage(): { jarId: string } {
   const jarId = DEFAULT_JAR_ID
-  if (!localStorageAdapter.getJar(jarId)) {
-    localStorageAdapter.saveJar(createDefaultJar())
+  if (!get<Jar>(KEYS.jar(jarId))) {
+    set(KEYS.jar(jarId), createDefaultJar())
   }
   return { jarId }
 }
