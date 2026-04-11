@@ -165,7 +165,7 @@ API response shapes are serialized via `serializeJar` / `serializeComplaint` to 
 | Frontend (React) | ✅ Deployed | https://complain-jar.vercel.app |
 | Database (Neon) | ✅ Live | Neon PostgreSQL, schema applied |
 | Backend (Express) | ✅ Deployed | https://complain-jar-production.up.railway.app |
-| Analysis (Python/CrewAI) | ⚠️ Local only | `localhost:8000` |
+| Analysis (Python/CrewAI) | ✅ Deployed | https://imaginative-integrity-production-cbee.up.railway.app |
 
 **Railway notes:**
 - Build command: `cd server && npm install && npx prisma generate && npm run build`
@@ -173,7 +173,10 @@ API response shapes are serialized via `serializeJar` / `serializeComplaint` to 
 - Required env variables: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`
 - Public networking port must match what Railway assigns as `PORT` (check deploy logs for `Server running on http://localhost:XXXX`)
 
-**To deploy the analysis service:** Host the Python FastAPI service on Railway or Fly.io and set `ANALYSIS_SERVICE_URL` on the Express service. Currently only works locally.
+**Analysis service Railway notes:**
+- Root directory must be set to `analysis-service` in Railway service settings
+- Required env variables: `OPENAI_API_KEY`, `CORS_ORIGIN` (set to the Express Railway URL)
+- Express service requires `ANALYSIS_SERVICE_URL` pointing to the Python service (include `https://` — Railway's copy button omits it)
 
 ## Recently fixed bugs
 
@@ -270,13 +273,12 @@ All `/api/jars` routes require `Authorization: Bearer <token>`.
 ## What to work on next
 
 ### High priority
-1. **Deploy analysis service** — host Python/FastAPI on Railway or Fly.io so the Analyse button works on the live site; set `ANALYSIS_SERVICE_URL` on the Express Railway service and update CORS in `main.py` to allow the Railway backend origin
-2. **Runtime validation on localStorage data** — `JSON.parse(raw) as T` is a TypeScript cast with no runtime check; add Zod validation at the storage boundary before any real data is stored
+1. **Runtime validation on localStorage data** — `JSON.parse(raw) as T` is a TypeScript cast with no runtime check; add Zod validation at the storage boundary before any real data is stored
+2. **Partner/friend invite UI** — backend + data model already exist (`POST /api/jars/:id/members`, `JarMember` table); needs an invite flow in the UI
 
 ### Medium priority
-3. **Partner/friend invite UI** — backend + data model already exist (`POST /api/jars/:id/members`, `JarMember` table); needs an invite flow in the UI
-4. **Snapshot `currency` per complaint** — currently always read from the parent `Jar`; if currency changes, old complaints show the wrong symbol
-5. **Replace `generateId()` in localStorage adapter** — `Date.now() + Math.random()` is not collision-safe; replace with `crypto.randomUUID()`
+3. **Snapshot `currency` per complaint** — currently always read from the parent `Jar`; if currency changes, old complaints show the wrong symbol
+4. **Replace `generateId()` in localStorage adapter** — `Date.now() + Math.random()` is not collision-safe; replace with `crypto.randomUUID()`
 
 ### Longer term
 6. **Group jars** — data model supports it; needs a "select active jar" UI concept and multi-member flows
