@@ -83,7 +83,7 @@ export function Settings() {
       <section className="mb-6">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Account</h2>
         <button
-          onClick={() => { clearAuth(); localStorage.removeItem('cj:activeJarId'); window.location.reload() }}
+          onClick={() => { clearAuth(); localStorage.removeItem('cj:activeJarId'); window.location.href = '/' }}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-red-200 bg-white text-red-500 text-sm font-medium hover:bg-red-50 active:scale-95 transition-all"
         >
           <LogOut size={15} />
