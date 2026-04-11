@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
+import { track } from '@vercel/analytics'
 import { useJarStore } from '../store/jarStore'
 import { formatAmount } from '../services/storage'
 
@@ -40,6 +41,7 @@ export function AddComplaintModal({ open, onClose }: AddComplaintModalProps) {
     setError(null)
     try {
       await addComplaint(note)
+      track('complaint_added', { has_note: Boolean(note.trim()) })
       onClose()
     } catch {
       setError('Could not add complaint — please try again.')

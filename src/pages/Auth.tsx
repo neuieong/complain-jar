@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Wallet } from 'lucide-react'
+import { track } from '@vercel/analytics'
 import { login, register, storeToken, storeUser, AuthError } from '../services/auth'
 
 interface AuthPageProps {
@@ -29,6 +30,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
 
       storeToken(result.token)
       storeUser(result.user)
+      track(mode === 'login' ? 'user_logged_in' : 'user_registered')
       onAuthenticated()
     } catch (err) {
       setError(

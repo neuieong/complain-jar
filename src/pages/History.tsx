@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Sparkles, X, AlertCircle } from 'lucide-react'
+import { track } from '@vercel/analytics'
 import { useJarStore } from '../store/jarStore'
 import { ComplaintCard } from '../components/ComplaintCard'
 import { getToken } from '../services/auth'
@@ -40,10 +41,12 @@ export function History() {
         return
       }
 
+      const complaintCount = body.complaintCount ?? complaints.length
+      track('analysis_run', { complaint_count: complaintCount })
       setAnalysis({
         status: 'done',
         report: body.report ?? '',
-        complaintCount: body.complaintCount ?? complaints.length,
+        complaintCount,
       })
     } catch {
       setAnalysis({ status: 'error', message: 'Could not reach the analysis service' })

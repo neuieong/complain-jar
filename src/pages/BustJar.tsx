@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { track } from '@vercel/analytics'
 import { useJarStore } from '../store/jarStore'
 import { JarVisual } from '../components/JarVisual'
 
@@ -23,6 +24,10 @@ export function BustJar() {
     setAmountAtBust(stats.totalAmountFormatted)
     try {
       await bustJar()
+      track('jar_busted', {
+        complaint_count: stats.totalComplaints,
+        amount_formatted: stats.totalAmountFormatted,
+      })
       setBusted(true)
     } finally {
       setBusting(false)
