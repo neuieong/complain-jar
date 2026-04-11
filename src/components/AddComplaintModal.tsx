@@ -10,6 +10,8 @@ interface AddComplaintModalProps {
 
 export function AddComplaintModal({ open, onClose }: AddComplaintModalProps) {
   const [note, setNote] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const addComplaint = useJarStore((s) => s.addComplaint)
   const jar = useJarStore((s) => s.jar)
@@ -17,6 +19,8 @@ export function AddComplaintModal({ open, onClose }: AddComplaintModalProps) {
   useEffect(() => {
     if (open) {
       setNote('')
+      setError(null)
+      setSubmitting(false)
       setTimeout(() => inputRef.current?.focus(), 80)
     }
   }, [open])
@@ -24,15 +28,23 @@ export function AddComplaintModal({ open, onClose }: AddComplaintModalProps) {
   // Close on Escape
   useEffect(() => {
     if (!open) return
-    const handler = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const handler = (e: KeyboardEvent) => e.key === 'Escape' && !submitting && onClose()
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [open, onClose, submitting])
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    addComplaint(note)
-    onClose()
+    if (submitting) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await addComplaint(note)
+      onClose()
+    } catch {
+      setError('Could not add complaint — please try again.')
+      setSubmitting(false)
+    }
   }
 
   if (!open) return null
@@ -42,7 +54,7 @@ export function AddComplaintModal({ open, onClose }: AddComplaintModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      onClick={onClose}
+      onClick={() => { if (!submitting) onClose() }}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
@@ -54,7 +66,8 @@ export function AddComplaintModal({ open, onClose }: AddComplaintModalProps) {
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          disabled={submitting}
+          className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-40"
           aria-label="Close"
         >
           <X size={18} />
@@ -73,14 +86,20 @@ export function AddComplaintModal({ open, onClose }: AddComplaintModalProps) {
             placeholder="What are you complaining about? (optional)"
             rows={3}
             maxLength={280}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+            disabled={submitting}
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent disabled:opacity-60"
           />
+
+          {error && (
+            <p className="text-xs text-red-500 text-center">{error}</p>
+          )}
 
           <button
             type="submit"
-            className="w-full bg-amber-400 hover:bg-amber-500 active:scale-95 text-white font-semibold py-3 rounded-xl transition-all"
+            disabled={submitting}
+            className="w-full bg-amber-400 hover:bg-amber-500 active:scale-95 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Drop it in the jar
+            {submitting ? 'Adding…' : 'Drop it in the jar'}
           </button>
         </form>
       </div>

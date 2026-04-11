@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useJarStore } from '../store/jarStore'
@@ -11,6 +11,11 @@ export function BustJar() {
   const navigate = useNavigate()
   const bustJar = useJarStore((s) => s.bustJar)
   const stats = useJarStore((s) => s.stats)()
+
+  // Redirect away if jar is empty — prevents busting an already-empty jar
+  useEffect(() => {
+    if (!busted && stats.totalComplaints === 0) navigate('/', { replace: true })
+  }, [busted, stats.totalComplaints, navigate])
 
   async function handleBust() {
     if (busting) return
