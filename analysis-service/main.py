@@ -19,11 +19,13 @@ from crew import run_analysis  # noqa: E402 — import after env is loaded
 
 app = FastAPI(title="Complain Jar Analysis Service")
 
-# Allow requests from the Express backend only
+# Allow requests from the Express backend only.
+# Set CORS_ORIGIN in production to the deployed Express URL.
+cors_origin = os.getenv("CORS_ORIGIN", "http://localhost:3001")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3001"],
-    allow_methods=["POST"],
+    allow_origins=[cors_origin],
+    allow_methods=["POST", "GET"],
     allow_headers=["*"],
 )
 
