@@ -13,7 +13,7 @@ A digital take on the swear jar — every complaint costs money that goes into a
 
 Full-stack prototype **fully deployed and live end-to-end**. The frontend (Vercel) talks to the Express backend (Railway) which reads/writes to Neon PostgreSQL. The frontend uses an **async `StorageAdapter` interface** that can be backed by either `localStorage` (offline/demo mode) or the Express HTTP API (real mode). Mode is toggled via `VITE_API_URL` — if set, the app shows a login screen and reads/writes to Neon; if unset, it falls back to localStorage with no auth required.
 
-A **CrewAI analysis feature** is built and working locally: three agents (Categorizer, Sentiment Analyst, Summarizer) process the jar's complaints and return a short insights report displayed on the History page. The Python/FastAPI service runs separately alongside Express. It is not yet deployed — it only works when running locally.
+A **CrewAI analysis feature** is fully deployed: three agents (Categorizer, Sentiment Analyst, Summarizer) process the jar's complaints and return a short insights report displayed on the History page. The Python/FastAPI service is deployed on Railway and proxied through Express.
 
 **Demo credentials:** `demo@complainjar.dev` / `password123` — jar pre-seeded with 25 realistic complaints.
 
@@ -186,13 +186,18 @@ API response shapes are serialized via `serializeJar` / `serializeComplaint` to 
 - **`bootstrapHttp` dead code** — exported function that immediately threw; superseded by `ensureJar`. Fixed: deleted.
 - **`Prisma.JarGetPayload` type** — `JarWithMembers` used a generic TypeScript syntax Railway's compiler rejected. Fixed: replaced with the proper Prisma utility type.
 - **`prisma generate` missing from build** — Railway build compiled TypeScript but never generated the Prisma client, causing a startup crash. Fixed: added `npx prisma generate` to `railway.json` build command.
+- **`AddComplaintModal` no loading state** — button could be mashed, creating duplicate complaints; network errors closed modal silently. Fixed: loading state, double-submit prevention, error message display.
+- **`BustJar` no empty jar guard** — direct URL navigation to `/bust` with 0 complaints caused confusing behaviour. Fixed: `useEffect` redirects to home if `totalComplaints === 0`.
+- **Logout redirect** — logout called `window.location.reload()` which stayed on `/settings` with no auth. Fixed: redirects to `/` so `AuthGate` picks it up.
+- **`BottomNav` on bust page** — navigation bar was visible during the destructive bust flow. Fixed: `BottomNav` returns null when `pathname === '/bust'`.
 
 ## Known bugs (minor, unfixed)
 
 - **React StrictMode double calls** — `getJar` + `getComplaints` are called twice on mount in dev (StrictMode fires effects twice). Harmless; the dedup only covers `ensureJar`, not the store's `init`.
 - **`GET /api/jars` picks newest jar** — ordered by `createdAt desc`; if a user accumulates multiple jars, they always land on the most recently created one. Fine for single-jar use, but needs a "select active jar" concept for multi-jar support.
-- **Analysis service CORS** — hardcoded to `http://localhost:3001`. Needs updating when the Python service is deployed.
 - **`bustedAt` semantics are ambiguous** — means "was busted at some point", not "is currently empty". Never cleared when a new cycle begins. Needs a `busts[]` log if bust history is tracked.
+- **Settings save has no error state** — if the network request to rename the jar or change the amount fails, the UI still shows "Saved". Silent failure. Low priority for prototype.
+- **Duplicate email error not explicitly handled** — registration with an existing email shows the backend's error string generically rather than a distinct UI message.
 
 ## Known issues to address before real payments
 
@@ -270,18 +275,26 @@ GET    /api/health                      — liveness check
 
 All `/api/jars` routes require `Authorization: Bearer <token>`.
 
+## Demo checklist (before any interview/demo)
+
+1. Visit `https://complain-jar-production.up.railway.app/api/health` — wakes up the Express service
+2. Visit `https://imaginative-integrity-production-cbee.up.railway.app/health` — wakes up the Python service
+3. Open `https://complain-jar.vercel.app` and log in with `demo@complainjar.dev` / `password123`
+4. Confirm 25 complaints are visible and the Analyse button appears on History
+5. All four services (Vercel, Railway Express, Railway Python, Neon) should now be warm for the demo
+
 ## What to work on next
 
-### High priority
-1. **Runtime validation on localStorage data** — `JSON.parse(raw) as T` is a TypeScript cast with no runtime check; add Zod validation at the storage boundary before any real data is stored
-2. **Partner/friend invite UI** — backend + data model already exist (`POST /api/jars/:id/members`, `JarMember` table); needs an invite flow in the UI
+### Polish (demo quality)
+1. **Settings save error state** — show an error if renaming jar or changing amount fails instead of a false "Saved" checkmark
+2. **Duplicate email error** — surface a distinct message when registration fails due to existing email
 
-### Medium priority
-3. **Snapshot `currency` per complaint** — currently always read from the parent `Jar`; if currency changes, old complaints show the wrong symbol
-4. **Replace `generateId()` in localStorage adapter** — `Date.now() + Math.random()` is not collision-safe; replace with `crypto.randomUUID()`
+### Features
+3. **Partner/friend invite UI** — backend + data model already exist (`POST /api/jars/:id/members`, `JarMember` table); needs an invite flow in the UI
+4. **Runtime validation on localStorage data** — `JSON.parse(raw) as T` is a TypeScript cast with no runtime check; add Zod validation at the storage boundary
 
 ### Longer term
-6. **Group jars** — data model supports it; needs a "select active jar" UI concept and multi-member flows
-7. **Real payments** — `amountPerComplaint` stored in cents maps directly to a Stripe payment intent amount
-8. **Push notifications** — "your partner just complained again"
-9. **React Native port** — Zustand store and service layer are already framework-agnostic; only the component layer needs replacing
+5. **Group jars** — data model supports it; needs a "select active jar" UI concept and multi-member flows
+6. **Real payments** — `amountPerComplaint` stored in cents maps directly to a Stripe payment intent amount
+7. **Push notifications** — "your partner just complained again"
+8. **React Native port** — Zustand store and service layer are already framework-agnostic; only the component layer needs replacing
