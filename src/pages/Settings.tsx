@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Check } from 'lucide-react'
+import { Check, LogOut } from 'lucide-react'
 import { useJarStore } from '../store/jarStore'
 import { formatAmount } from '../services/storage'
+import { clearAuth } from '../services/auth'
 
 const PRESET_AMOUNTS = [50, 100, 200, 500] // cents
 
@@ -76,6 +77,18 @@ export function Settings() {
         <p className="text-xs text-gray-400 mt-2">
           Currently {formatAmount(currentAmount, currency)} per complaint
         </p>
+      </section>
+
+      {/* Account */}
+      <section className="mb-6">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Account</h2>
+        <button
+          onClick={() => { clearAuth(); localStorage.removeItem('cj:activeJarId'); window.location.reload() }}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-red-200 bg-white text-red-500 text-sm font-medium hover:bg-red-50 active:scale-95 transition-all"
+        >
+          <LogOut size={15} />
+          Log out
+        </button>
       </section>
 
       {/* Future features teaser */}
