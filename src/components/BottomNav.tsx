@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { Home, List, Settings } from 'lucide-react'
 
 const links = [
@@ -8,6 +8,9 @@ const links = [
 ]
 
 export function BottomNav() {
+  const { pathname } = useLocation()
+  if (pathname === '/bust') return null
+
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-100 pb-safe">
       <div className="max-w-sm mx-auto flex">
